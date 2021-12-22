@@ -1,12 +1,16 @@
 use std::env;
 
+use ip_watcher::{fetch, update};
+
 
 fn main() -> Result<(), &'static str> {
 
-    let gist = env::var("HOME_IP_GIST").or(Err("HOME_IP_GIST environment variable is not set."))?;
+    let gist = env::var("GIST_ID").or(Err("GIST_ID environment variable is not set."))?;
 
-    let new_ip = ip_watcher::fetch_new_ip().or(Err("Could not get IP address from IP Info."))?;
-    let old_ip = ip_watcher::check_old_ip(&gist).or(Err("Could not get old IP from GitHub Gist."))?;
+    let new_ip = fetch::get_new_ip().or(Err("Could not get IP address from IP Info."))?;
+    let old_ip = fetch::get_old_ip(&gist).or(Err("Could not get old IP from GitHub Gist."))?;
+
+    println!("New: {}\nOld: {}", new_ip, old_ip);
 
     // Check if we need to update:
     if new_ip != old_ip {

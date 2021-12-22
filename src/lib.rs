@@ -1,77 +1,65 @@
 use std::error;
-use curl::easy::Easy;
+use std::time::SystemTime;
+use chrono::{DateTime, Datelike};
+
 use serde::{Serialize, Deserialize};
-use serde_json::{from_str, Value};
+use curl::easy::Easy;
+
+
+pub mod fetch;
+pub mod update;
+
+
+type SimpleResult<T> = Result<T, Box<dyn error::Error>>;
 
 
 #[derive(Debug, Serialize, Deserialize)]
-struct IPUpdate {
+pub struct IPUpdate {
     address: String,
-    since: String,
+    since: SystemTime,
 }
+
 
 #[derive(Debug, Serialize, Deserialize)]
-struct IPResults {
+pub struct IPResults {
     current: IPUpdate,
-    previous: [IPUpdate; 10],
+    previous: Vec<IPUpdate>,
 }
 
 
-type StringResult = Result<String, Box<dyn error::Error>>;
+impl IPUpdate {
+
+    fn format_time(&self) -> String {
+
+        let time: DateTime<chrono::Local> = self.since.into();
+
+        let suffix = match time.day() {
+            11 | 12 | 13 => "th",
+            n if n % 10 == 1 => "st",
+            n if n % 10 == 2 => "nd",
+            n if n % 10 == 3 => "rd",
+            _ => "th"
+        };
+
+        time.format(&format!("%B %-d{}, %Y", suffix)).to_string()
+    }
+
+}
 
 
-pub fn curl_to_string(url: &str) -> StringResult {
+
+fn get_effective(url: &str) -> SimpleResult<String> {
 
     let mut curl = Easy::new();
-    let mut buffer = Vec::new();
 
-    curl.url(url).unwrap();
+    curl.url(url)?;
+    curl.follow_location(true)?;
+    curl.perform()?;
 
-    {
-        let mut transfer = curl.transfer();
-
-        transfer.write_function(|data| {
-            buffer.extend_from_slice(data);
-            Ok(data.len())
-        }).unwrap();
-
-        transfer.perform()?;
+    if let Some(effective) = curl.effective_url()? {
+        Ok(effective.to_owned())
+    } else {
+        Ok(url.to_owned())
     }
 
-    Ok(String::from_utf8(buffer)?)
-}
-
-
-pub fn fetch_new_ip() -> StringResult {
-
-    let json = curl_to_string("https://ipinfo.io")?;
-    let json: Value = from_str(&json)?;
-
-    if let Some(value) = json.get("ip") {
-        if let Value::String(addr) = value {
-            return Ok(addr.clone());
-        }
-    }
-
-    Err("No 'ip' key in JSON".into())
-}
-
-
-pub fn check_old_ip(gist: &str) -> StringResult {
-
-    let url = format!("https://gist.githubusercontent.com/{}/raw/ip_data.json", gist);
-
-    let json = curl_to_string(&url)?;
-    let json: Value = from_str(&json)?;
-
-    let value = json.get("current")
-        .and_then(|val| val.get("address"));
-
-    if let Some(value) = value {
-        if let Value::String(addr) = value {
-            return Ok(addr.clone());
-        }
-    }
-
-    Err("No 'current.address' key in JSON".into())
 }
