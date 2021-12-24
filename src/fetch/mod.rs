@@ -1,8 +1,38 @@
+use crate::{BoxResult, get_effective, DATA_FILENAME};
+
+use curl::easy::Easy;
 use serde_json::{from_str, Value};
-use crate::{get_effective, curl_to_string, StaticResult};
 
 
-pub fn get_new_ip() -> StaticResult<String> {
+fn curl_to_string(url: &str) -> BoxResult<String> {
+
+    let mut curl = Easy::new();
+    let mut buffer = Vec::new();
+
+    curl.url(url).unwrap();
+    curl.follow_location(true).unwrap();
+
+    {
+        let mut transfer = curl.transfer();
+
+        transfer.write_function(|data| {
+            buffer.extend_from_slice(data);
+            Ok(data.len())
+        }).unwrap();
+
+        transfer.perform().or(Err("Could not perform network request"))?;
+    }
+
+    let code = curl.response_code().unwrap();
+    if code == 404 {
+        return Err(format!("Error 404: {}", url).into());
+    }
+
+    String::from_utf8(buffer).or(Err("Could not convert network response to String".into()))
+}
+
+
+pub fn get_new_ip() -> BoxResult<String> {
 
     let json = curl_to_string("https://ipinfo.io")?;
     let json: Value = from_str(&json).or(Err("Did not receive valid JSON from server"))?;
@@ -13,14 +43,14 @@ pub fn get_new_ip() -> StaticResult<String> {
         }
     }
 
-    Err("No 'ip' key in JSON response")
+    Err("No 'ip' key in JSON response".into())
 }
 
 
-pub fn get_current_ip(gist_id: &str) -> StaticResult<String> {
+pub fn get_current_ip(gist_id: &str) -> BoxResult<String> {
 
     let url = get_effective(&format!("https://gist.github.com/{}", gist_id))?;
-    let url = format!("{}/raw/ip_data.json", url);
+    let url = format!("{}/raw/{}", url, DATA_FILENAME);
 
     let json = curl_to_string(&url)?;
     let json: Value = from_str(&json).or(Err("Did not receive valid JSON from server"))?;
@@ -34,5 +64,5 @@ pub fn get_current_ip(gist_id: &str) -> StaticResult<String> {
         }
     }
 
-    Err("No 'current.address' key in JSON response")
+    Err("No 'current.address' key in JSON response".into())
 }

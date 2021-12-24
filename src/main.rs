@@ -1,10 +1,10 @@
 use std::env;
 use clap::{App, AppSettings, SubCommand, Arg, ArgMatches};
 
-use ip_watcher::{fetch, update};
+use watchdog::{fetch, update, BoxResult};
 
 
-fn main() -> Result<(), &'static str> {
+fn main() -> BoxResult<()> {
 
     let matches = clap().get_matches();
     let subcommand = matches.subcommand();
@@ -19,16 +19,20 @@ fn main() -> Result<(), &'static str> {
     } else if let ("update", Some(sub_matches)) = subcommand {
 
         let gist_id = get_gist_id(sub_matches)?;
-
+        let old_ip = fetch::get_current_ip(&gist_id)?;
         let new_ip = fetch::get_new_ip()?;
-        update::clone_and_push(&gist_id, &new_ip)?;
+
+        if sub_matches.is_present("force") || new_ip != old_ip {
+            let use_ssh = sub_matches.is_present("use-ssh");
+            update::clone_and_push(&gist_id, &new_ip, use_ssh)?;
+        }
 
         if sub_matches.is_present("print") {
             println!("{}", new_ip);
         }
 
     } else {
-        // Clap setting 'SubcommandRequiredElseHelp' means at one of the above subcommands will always be run
+        // Clap setting 'SubcommandRequiredElseHelp' means at least one of the above subcommands will always be run
         unreachable!();
     }
 
@@ -38,7 +42,7 @@ fn main() -> Result<(), &'static str> {
 
 fn clap() -> App<'static, 'static> {
 
-    let gist_args = vec![
+    let common_args = vec![
         Arg::with_name("gist")
             .required_unless("use-env")
             .conflicts_with("use-env")
@@ -49,22 +53,28 @@ fn clap() -> App<'static, 'static> {
             .long("var")
             .value_name("environment variable")
             .help("Pull the Gist ID from an environment variable instead"),
+        Arg::with_name("use-ssh")
+            .short("s")
+            .long("use-ssh")
+            .help("Use an SSH key instead of HTTPS to authenticate with gist.github.com")
     ];
 
     App::new("Watchdog")
         .subcommands(vec![
             SubCommand::with_name("fetch")
                 .about("Fetch the most up to date IP address from the gist")
-                .args(&gist_args),
+                .args(&common_args),
             SubCommand::with_name("update")
                 .about("Fetch the current public IP address and push it to the gist")
-                .args(&gist_args)
-                .arg(
-                    Arg::with_name("print")
+                .args(&common_args)
+                .arg(Arg::with_name("force")
+                        .long("force")
+                        .short("f")
+                        .help("Update the gist even if the current IP matches the new IP"))
+                .arg(Arg::with_name("print")
                         .long("print")
                         .short("p")
-                        .help("Print the new IP address after updating the gist"),
-                ),
+                        .help("Print the new IP address after updating the gist"))
         ])
         .setting(AppSettings::SubcommandRequiredElseHelp)
 

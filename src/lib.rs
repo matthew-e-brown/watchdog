@@ -1,5 +1,6 @@
+use std::error::Error;
 use std::time::SystemTime;
-use chrono::{DateTime, Datelike};
+use chrono::{DateTime, Datelike, Local};
 
 use serde::{Serialize, Deserialize};
 use curl::easy::Easy;
@@ -8,7 +9,11 @@ use curl::easy::Easy;
 pub mod fetch;
 pub mod update;
 
-type StaticResult<T> = Result<T, &'static str>;
+pub type StaticResult<T> = Result<T, &'static str>;
+pub type BoxResult<T> = Result<T, Box<dyn Error>>;
+
+const DATA_FILENAME: &'static str = "data.json";
+const MD_FILENAME: &'static str = "addresses.md";
 
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -29,7 +34,7 @@ impl IPUpdate {
 
     fn format_time(&self) -> String {
 
-        let time: DateTime<chrono::Local> = self.since.into();
+        let time: DateTime<Local> = self.since.into();
 
         let suffix = match time.day() {
             11 | 12 | 13 => "th",
@@ -43,31 +48,6 @@ impl IPUpdate {
     }
 
 }
-
-
-
-fn curl_to_string(url: &str) -> StaticResult<String> {
-
-    let mut curl = Easy::new();
-    let mut buffer = Vec::new();
-
-    curl.url(url).unwrap();
-    curl.follow_location(true).unwrap();
-
-    {
-        let mut transfer = curl.transfer();
-
-        transfer.write_function(|data| {
-            buffer.extend_from_slice(data);
-            Ok(data.len())
-        }).unwrap();
-
-        transfer.perform().or(Err("Could not perform network request"))?;
-    }
-
-    String::from_utf8(buffer).or(Err("Could not convert network response to String"))
-}
-
 
 
 fn get_effective(url: &str) -> StaticResult<String> {

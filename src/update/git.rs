@@ -1,52 +1,90 @@
+use std::path::Path;
+use std::process::Command;
+
+use crate::StaticResult;
+
 use tempfile::TempDir;
-use git2::Repository;
-
-use crate::{StaticResult, get_effective};
 
 
-pub fn clone(gist_id: &str) -> StaticResult<(TempDir, Repository)> {
+pub fn clone(gist_id: &str, use_ssh: bool) -> StaticResult<TempDir> {
 
-    let url = format!("https://gist.github.com/{}", gist_id);
-    let url = get_effective(&url)?;
+    let url = if use_ssh {
+        format!("git@gist.github.com:{}.git", gist_id)
+    } else {
+        format!("https://gist.github.com/{}", gist_id)
+    };
 
-    let dir = TempDir::new().unwrap();
-    let repo = Repository::clone(&url, dir.path()).or(Err("Could not clone gist"))?;
+    let dir = TempDir::new().or(Err("Could not create temporary directory."))?;
+    let path = dir.path().to_str().unwrap();
 
-    Ok((dir, repo))
+    // Clone into dir
+    let status = Command::new("git")
+        .arg("-C")
+        .arg(path)
+        .arg("clone")
+        .arg(&url)
+        .arg(".")
+        .status()
+        .or(Err("Could not run `git`."))?;
+
+
+    if status.success() {
+        Ok(dir)
+    } else {
+        dir.close().unwrap();
+        Err("Could not clone repository.")
+    }
 }
 
 
-pub fn commit<T, I>(repo: &Repository, paths: I)
-where
-    T: git2::IntoCString,
-    I: IntoIterator<Item = T>
-{
-    // Stage
-    let mut index = repo.index().unwrap();
-    index.add_all(paths, git2::IndexAddOption::DEFAULT, None).unwrap();
-    index.write().unwrap();
+pub fn add_and_commit(repo_path: &Path, message: String) -> StaticResult<()> {
 
-    let head = repo.head().unwrap();
-    let author = repo.signature().unwrap();
+    let path = repo_path.to_str().unwrap();
 
-    // Commit
-    // let oid = index.write_tree()?;
-    // let sig = repo.signature()?;
-    // let parent = repo.head()?.peel_to_commit()?;
-    // let tree = repo.find_tree(oid)?;
+    let status = Command::new("git")
+        .arg("-C")
+        .arg(path)
+        .arg("add")
+        .arg("-A")
+        .status()
+        .or(Err("Could not run `git`."))?;
 
-    // repo.commit(
-    //     Some("HEAD"),
-    //     &sig,
-    //     &sig,
-    //     "message",
-    //     &tree,
-    //     &[&parent]
-    // )?;
+    if !status.success() {
+        return Err("Could not stage changes");
+    }
+
+    let status = Command::new("git")
+        .arg("-C")
+        .arg(path)
+        .arg("commit")
+        .arg("-m")
+        .arg(&message)
+        .status()
+        .or(Err("Could not run `git`."))?;
+
+    if !status.success() {
+        return Err("Could not commit changes.");
+    }
+
+    Ok(())
 }
 
 
-pub fn push(repo: &Repository) -> StaticResult<()> {
+pub fn push(repo_path: &Path) -> StaticResult<()> {
+
+    let path = repo_path.to_str().unwrap();
+
+    let status = Command::new("git")
+        .arg("-C")
+        .arg(path)
+        .arg("push")
+        .arg("origin")
+        .status()
+        .or(Err("Could not run `git`."))?;
+
+    if !status.success() {
+        return Err("Could not push to repository.");
+    }
 
     Ok(())
 }
