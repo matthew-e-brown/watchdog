@@ -45,14 +45,14 @@ impl IPUpdate {
         if utc {
 
             let suffix = Self::get_suffix(self.since.day());
-            let fmt = format!("%H:%M on %B %-d{}, %Y", suffix);
+            let fmt = format!("%B %-d{}, %Y, %H:%M", suffix);
             self.since.format(&fmt).to_string()
 
         } else {
 
             let time: DateTime<Local> = self.since.into();
             let suffix = Self::get_suffix(time.day());
-            let fmt = format!("%-I:%M %P on %B %-d{}, %Y", suffix);
+            let fmt = format!("%B %-d{}, %Y, %-I:%M %P", suffix);
             time.format(&fmt).to_string()
 
         }
