@@ -1,46 +1,60 @@
 use std::io::Write;
 use std::{fs, path::Path};
-use crate::{SimpleResult, IPResults};
+use crate::IPResults;
 
 use super::DATA_FILENAME;
 
 
-pub fn read_ip(repo_path: &Path) -> SimpleResult<Option<IPResults>> {
+/// Reads the IP Results from the cloned repository
+pub fn read_ip(repo_path: &Path) -> Option<IPResults> {
 
-    let data = match fs::read_to_string(Path::new(repo_path).join(DATA_FILENAME)) {
+    let file = Path::new(repo_path).join(DATA_FILENAME);
+
+    let data = match fs::read_to_string(file) {
         Ok(contents) => contents,
-        Err(_) => return Ok(None), // we will need to create the file
+        Err(_) => return None, // we will need to create the file
     };
 
-    let data: IPResults = serde_json::from_str(&data)?;
-    Ok(Some(data))
+    let data = serde_json::from_str::<IPResults>(&data);
+    if let Err(_) = data {
+        None
+    } else {
+        Some(data.unwrap())
+    }
 }
 
 
+pub fn clear_folder(path: &Path) {
 
-pub fn write_ip(path: &Path, data: &IPResults) -> SimpleResult<()> {
+    let dir = fs::read_dir(path).unwrap();
+
+    for file in dir {
+        let file = file.unwrap();
+    }
+}
+
+
+pub fn write_ip(path: &Path, data: &IPResults) {
 
     let mut file = fs::OpenOptions::new()
         .write(true)        // open in 'w' mode
         .create(true)       // create if does not exist
-        .open(path)?;
+        .open(path).unwrap();
 
-    let data = serde_json::to_string_pretty(data)?;
-    file.write(data.as_bytes())?;
-
-    Ok(())
+    let data = serde_json::to_string_pretty(data).unwrap();
+    file.write(data.as_bytes()).unwrap();
 }
 
 
 
-pub fn write_md(path: &Path, data: &IPResults) -> SimpleResult<()> {
+pub fn write_md(path: &Path, data: &IPResults) {
 
     let mut file = fs::OpenOptions::new()
         .write(true)
         .create(true)
-        .open(path)?;
+        .open(path).unwrap();
 
-    // We will format the previous strings one time
+    // We will format the 'previous' strings once and re-use
     struct Formatted {
         addr: String,
         date: String,
@@ -77,12 +91,11 @@ The previous ten IP addresses were:
         current.format_time(), current.address, "From", "IP Address", ':', ':', w1=wid1, w2=wid2
     );
 
-    file.write(output.as_bytes())?;
+    file.write(output.as_bytes()).unwrap();
 
     for update in previous.iter() {
         let output = format!("\n| {:<w1$} | {:>w2$} |", update.date, update.addr, w1=wid1, w2=wid2);
-        file.write(output.as_bytes())?;
+        file.write(output.as_bytes()).unwrap();
     }
 
-    Ok(())
 }

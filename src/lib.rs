@@ -1,4 +1,3 @@
-use std::error;
 use std::time::SystemTime;
 use chrono::{DateTime, Datelike};
 
@@ -9,8 +8,7 @@ use curl::easy::Easy;
 pub mod fetch;
 pub mod update;
 
-
-type SimpleResult<T> = Result<T, Box<dyn error::Error>>;
+type StaticResult<T> = Result<T, &'static str>;
 
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -48,15 +46,39 @@ impl IPUpdate {
 
 
 
-fn get_effective(url: &str) -> SimpleResult<String> {
+fn curl_to_string(url: &str) -> StaticResult<String> {
+
+    let mut curl = Easy::new();
+    let mut buffer = Vec::new();
+
+    curl.url(url).unwrap();
+    curl.follow_location(true).unwrap();
+
+    {
+        let mut transfer = curl.transfer();
+
+        transfer.write_function(|data| {
+            buffer.extend_from_slice(data);
+            Ok(data.len())
+        }).unwrap();
+
+        transfer.perform().or(Err("Could not perform network request"))?;
+    }
+
+    String::from_utf8(buffer).or(Err("Could not convert network response to String"))
+}
+
+
+
+fn get_effective(url: &str) -> StaticResult<String> {
 
     let mut curl = Easy::new();
 
-    curl.url(url)?;
-    curl.follow_location(true)?;
-    curl.perform()?;
+    curl.url(url).unwrap();
+    curl.follow_location(true).unwrap();
+    curl.perform().or(Err("Could not perform network request"))?;
 
-    if let Some(effective) = curl.effective_url()? {
+    if let Some(effective) = curl.effective_url().unwrap() {
         Ok(effective.to_owned())
     } else {
         Ok(url.to_owned())

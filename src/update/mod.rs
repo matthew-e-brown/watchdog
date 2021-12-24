@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::time::SystemTime;
 
-use crate::{SimpleResult, IPResults, IPUpdate};
+use crate::{IPResults, IPUpdate, StaticResult};
 
 const DATA_FILENAME: &'static str = "data.json";
 const MD_FILENAME: &'static str = "addresses.md";
@@ -11,16 +11,20 @@ mod git;
 mod data;
 
 
-pub fn push_new_ip(gist_id: &str, new_ip: String) -> SimpleResult<()> {
+pub fn clone_and_push(gist_id: &str, new_ip: &str) -> StaticResult<()> {
 
-    let update = IPUpdate { address: new_ip, since: SystemTime::now() };
     let (dir, repo) = git::clone(gist_id)?;
+
+    let update = IPUpdate {
+        address: new_ip.to_owned(),
+        since: SystemTime::now(),
+    };
 
     // Will error if there is no workdir. Since we are the ones cloning it, we know it won't be bare and there will
     // always be a workdir; we may `unwrap`.
     let path = repo.workdir().unwrap();
 
-    let new_data = if let Some(mut data) = data::read_ip(path)? {
+    let new_data = if let Some(mut data) = data::read_ip(path) {
         data.previous.insert(0, data.current);
         data.previous.truncate(10);
         data.current = update;
@@ -36,17 +40,17 @@ pub fn push_new_ip(gist_id: &str, new_ip: String) -> SimpleResult<()> {
     let md_path = Path::new(path).join(MD_FILENAME);
 
     // Serialize and write to file
-    data::write_ip(&ip_path, &new_data)?;
-    data::write_md(&md_path, &new_data)?;
+    data::write_ip(&ip_path, &new_data);
+    data::write_md(&md_path, &new_data);
 
     // Commit changes
-    git::commit(&repo, &[ ip_path, md_path ])?;
+    git::commit(&repo, &[ ip_path, md_path ]);
 
     // Push changes
 
 
     std::mem::drop(repo); // Need to drop repo before temp dir can be freed
-    dir.close()?;
+    dir.close().unwrap();
     Ok(())
 }
 

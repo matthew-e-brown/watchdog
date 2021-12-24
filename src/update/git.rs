@@ -1,36 +1,33 @@
 use tempfile::TempDir;
-use git2::{Repository, BranchType};
+use git2::Repository;
 
-use crate::{SimpleResult, get_effective};
+use crate::{StaticResult, get_effective};
 
 
-pub fn clone(gist_id: &str) -> SimpleResult<(TempDir, Repository)> {
+pub fn clone(gist_id: &str) -> StaticResult<(TempDir, Repository)> {
 
     let url = format!("https://gist.github.com/{}", gist_id);
     let url = get_effective(&url)?;
 
-    let dir = TempDir::new()?;
-
-    let repo = Repository::clone(&url, dir.path())?;
+    let dir = TempDir::new().unwrap();
+    let repo = Repository::clone(&url, dir.path()).or(Err("Could not clone gist"))?;
 
     Ok((dir, repo))
 }
 
 
-// From:
-// https://github.com/rust-lang/git2-rs/issues/561
-pub fn commit<T, I>(repo: &Repository, paths: I) -> SimpleResult<()>
+pub fn commit<T, I>(repo: &Repository, paths: I)
 where
     T: git2::IntoCString,
     I: IntoIterator<Item = T>
 {
     // Stage
-    let mut index = repo.index()?;
-    index.add_all(paths, git2::IndexAddOption::DEFAULT, None)?;
-    index.write()?;
+    let mut index = repo.index().unwrap();
+    index.add_all(paths, git2::IndexAddOption::DEFAULT, None).unwrap();
+    index.write().unwrap();
 
-    let head = repo.head()?;
-    let author = repo.signature()?;
+    let head = repo.head().unwrap();
+    let author = repo.signature().unwrap();
 
     // Commit
     // let oid = index.write_tree()?;
@@ -46,12 +43,10 @@ where
     //     &tree,
     //     &[&parent]
     // )?;
-
-    Ok(())
 }
 
 
-pub fn push(repo: &Repository) -> SimpleResult<()> {
+pub fn push(repo: &Repository) -> StaticResult<()> {
 
     Ok(())
 }
