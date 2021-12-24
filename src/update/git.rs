@@ -1,9 +1,21 @@
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 use crate::StaticResult;
 
 use tempfile::TempDir;
+
+
+fn git(path: &str) -> Command {
+    let mut command = Command::new("git");
+
+    command.arg("-C")
+        .arg(path)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+
+    command
+}
 
 
 pub fn clone(gist_id: &str, use_ssh: bool) -> StaticResult<TempDir> {
@@ -18,9 +30,7 @@ pub fn clone(gist_id: &str, use_ssh: bool) -> StaticResult<TempDir> {
     let path = dir.path().to_str().unwrap();
 
     // Clone into dir
-    let status = Command::new("git")
-        .arg("-C")
-        .arg(path)
+    let status = git(path)
         .arg("clone")
         .arg(&url)
         .arg(".")
@@ -40,9 +50,7 @@ pub fn add_and_commit(repo_path: &Path, message: String) -> StaticResult<()> {
 
     let path = repo_path.to_str().unwrap();
 
-    let status = Command::new("git")
-        .arg("-C")
-        .arg(path)
+    let status = git(path)
         .arg("add")
         .arg("-A")
         .status()
@@ -52,9 +60,7 @@ pub fn add_and_commit(repo_path: &Path, message: String) -> StaticResult<()> {
         return Err("Could not stage changes");
     }
 
-    let status = Command::new("git")
-        .arg("-C")
-        .arg(path)
+    let status = git(path)
         .arg("commit")
         .arg("-m")
         .arg(&message)
@@ -73,9 +79,7 @@ pub fn push(repo_path: &Path) -> StaticResult<()> {
 
     let path = repo_path.to_str().unwrap();
 
-    let status = Command::new("git")
-        .arg("-C")
-        .arg(path)
+    let status = git(path)
         .arg("push")
         .arg("origin")
         .status()
