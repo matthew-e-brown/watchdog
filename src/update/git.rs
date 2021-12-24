@@ -27,7 +27,6 @@ pub fn clone(gist_id: &str, use_ssh: bool) -> StaticResult<TempDir> {
         .status()
         .or(Err("Could not run `git`."))?;
 
-
     if status.success() {
         Ok(dir)
     } else {

@@ -19,12 +19,21 @@ fn main() -> BoxResult<()> {
     } else if let ("update", Some(sub_matches)) = subcommand {
 
         let gist_id = get_gist_id(sub_matches)?;
-        let old_ip = fetch::get_current_ip(&gist_id)?;
         let new_ip = fetch::get_new_ip()?;
 
-        if sub_matches.is_present("force") || new_ip != old_ip {
+        // We want to update if:
+        // - the '-f' flag is set,
+        // - the new IP is different from the old IP, or
+        // - we failed to get the old IP (likely due to the gist being fresh)
+        let update = sub_matches.is_present("force") || match fetch::get_current_ip(&gist_id) {
+            Ok(old_ip) => new_ip != old_ip,
+            Err(_) => true,
+        };
+
+        if update {
             let use_ssh = sub_matches.is_present("use-ssh");
-            update::clone_and_push(&gist_id, &new_ip, use_ssh)?;
+            let use_utc = sub_matches.is_present("use-utc");
+            update::clone_and_push(&gist_id, &new_ip, use_ssh, use_utc)?;
         }
 
         if sub_matches.is_present("print") {
@@ -40,6 +49,7 @@ fn main() -> BoxResult<()> {
 }
 
 
+
 fn clap() -> App<'static, 'static> {
 
     let common_args = vec![
@@ -53,13 +63,10 @@ fn clap() -> App<'static, 'static> {
             .long("var")
             .value_name("environment variable")
             .help("Pull the Gist ID from an environment variable instead"),
-        Arg::with_name("use-ssh")
-            .short("s")
-            .long("use-ssh")
-            .help("Use an SSH key instead of HTTPS to authenticate with gist.github.com")
     ];
 
     App::new("Watchdog")
+        .author("Matthew Brown <matthew.e.brown.17@gmail.com>")
         .subcommands(vec![
             SubCommand::with_name("fetch")
                 .about("Fetch the most up to date IP address from the gist")
@@ -75,6 +82,14 @@ fn clap() -> App<'static, 'static> {
                         .long("print")
                         .short("p")
                         .help("Print the new IP address after updating the gist"))
+                .arg(Arg::with_name("use-ssh")
+                        .short("s")
+                        .long("use-ssh")
+                        .help("Use an SSH key instead of HTTPS to authenticate with gist.github.com"))
+                .arg(Arg::with_name("use-utc")
+                        .short("z")
+                        .long("use-utc")
+                        .help("Use UTC times instead of local time in Markdown file"))
         ])
         .setting(AppSettings::SubcommandRequiredElseHelp)
 

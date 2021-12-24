@@ -1,6 +1,5 @@
 use std::error::Error;
-use std::time::SystemTime;
-use chrono::{DateTime, Datelike, Local};
+use chrono::{DateTime, Datelike, Local, Utc};
 
 use serde::{Serialize, Deserialize};
 use curl::easy::Easy;
@@ -19,7 +18,7 @@ const MD_FILENAME: &'static str = "addresses.md";
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IPUpdate {
     address: String,
-    since: SystemTime,
+    since: DateTime<Utc>,
 }
 
 
@@ -32,19 +31,31 @@ pub struct IPResults {
 
 impl IPUpdate {
 
-    fn format_time(&self) -> String {
-
-        let time: DateTime<Local> = self.since.into();
-
-        let suffix = match time.day() {
+    fn get_suffix(day: u32) -> &'static str {
+        match day {
             11 | 12 | 13 => "th",
             n if n % 10 == 1 => "st",
             n if n % 10 == 2 => "nd",
             n if n % 10 == 3 => "rd",
             _ => "th"
-        };
+        }
+    }
 
-        time.format(&format!("%B %-d{}, %Y", suffix)).to_string()
+    pub fn format_time(&self, utc: bool) -> String {
+        if utc {
+
+            let suffix = Self::get_suffix(self.since.day());
+            let fmt = format!("%H:%M on %B %-d{}, %Y", suffix);
+            self.since.format(&fmt).to_string()
+
+        } else {
+
+            let time: DateTime<Local> = self.since.into();
+            let suffix = Self::get_suffix(time.day());
+            let fmt = format!("%-I:%M %P on %B %-d{}, %Y", suffix);
+            time.format(&fmt).to_string()
+
+        }
     }
 
 }

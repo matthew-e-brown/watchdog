@@ -55,7 +55,7 @@ pub fn write_ip(path: &Path, data: &IPResults) -> io::Result<()> {
 
 
 
-pub fn write_md(path: &Path, data: &IPResults) -> io::Result<()> {
+pub fn write_md(path: &Path, data: &IPResults, use_utc: bool) -> io::Result<()> {
 
     // We will format the 'previous' strings once and re-use
     struct Formatted {
@@ -72,7 +72,7 @@ pub fn write_md(path: &Path, data: &IPResults) -> io::Result<()> {
     let previous: Vec<_> = data.previous.iter().map(|update| {
         Formatted {
             addr: format!("`{}`", update.address),
-            date: update.format_time(),
+            date: update.format_time(use_utc),
         }
     }).collect();
 
@@ -90,7 +90,7 @@ pub fn write_md(path: &Path, data: &IPResults) -> io::Result<()> {
 
     let output = format!(
         "# IP Addresses\n\nSince {}, my public IP address has been **`{}`**.",
-        current.format_time(), current.address
+        current.format_time(use_utc), current.address
     );
 
     file.write(output.as_bytes())?;
