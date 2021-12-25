@@ -45,7 +45,9 @@ using something like a `cron` job or the Windows Task Scheduler.
 - `--use-ssh`, `-s`: Use the `git@gist.github.com` URL for cloning and pushing
   the Gist, rather than HTTPS. Because this program simply spawns `git`
   directly, you can select a specific SSH key by [setting an environnement
-  variable](https://stackoverflow.com/a/29754018/10549827)
+  variable](https://stackoverflow.com/a/29754018/10549827).
+- `--dry-run`, `-d`: Fetch a new IP address from https://ipinfo.io and print it,
+  without updating any Gist.
 
 
 ### Fetch
