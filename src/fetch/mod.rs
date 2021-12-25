@@ -1,4 +1,4 @@
-use crate::{BoxResult, get_effective, DATA_FILENAME};
+use crate::{get_effective, BoxResult, DATA_FILENAME};
 
 use curl::easy::Easy;
 use serde_json::{from_str, Value};

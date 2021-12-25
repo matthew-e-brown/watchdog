@@ -1,7 +1,7 @@
 use std::io::{self, Write};
 use std::{fs, path::Path};
 
-use crate::{DATA_FILENAME, IPResults};
+use crate::{IPResults, DATA_FILENAME};
 
 
 /// Reads the IP Results from the cloned repository. Returns `None` if no valid JSON can be found.

@@ -1,5 +1,5 @@
+use clap::{crate_version, App, AppSettings, Arg, ArgMatches, SubCommand};
 use std::env;
-use clap::{App, AppSettings, SubCommand, Arg, ArgMatches, crate_version};
 
 use watchdog::{fetch, update, BoxResult};
 

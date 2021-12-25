@@ -1,9 +1,8 @@
-use std::error::Error;
 use chrono::{DateTime, Datelike, Local, Utc};
+use std::error::Error;
 
-use serde::{Serialize, Deserialize};
 use curl::easy::Easy;
-
+use serde::{Deserialize, Serialize};
 
 pub mod fetch;
 pub mod update;

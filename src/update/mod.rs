@@ -1,11 +1,11 @@
 use std::path::Path;
 
-use crate::{IPResults, IPUpdate, BoxResult, DATA_FILENAME, MD_FILENAME};
+use crate::{BoxResult, IPResults, IPUpdate, DATA_FILENAME, MD_FILENAME};
 
 use chrono::Utc;
 
-mod git;
 mod data;
+mod git;
 
 
 pub fn clone_and_push(gist_id: &str, new_ip: &str, use_ssh: bool, use_utc: bool) -> BoxResult<()> {
