@@ -27,6 +27,9 @@ This allows you to keep your Gist's ID private should you wish to put a call to
 `watchdog` in your `.bashrc` or `.ssh/config` files (as I intend to do), which
 may be committed to a dot-files repo.
 
+See `watchdog --help`, `watchdog update --help`, and `watchdog fetch --help` for
+a complete set of options.
+
 
 ### Update
 
@@ -51,3 +54,12 @@ Run `watchdog fetch` and pass an ID of a GitHub Gist to query it for the most
 up-to-date public IP address. This is intended to be used from another computer
 to get the address of the main computer, such as when you're attempting to
 establish SSH connection.
+
+
+## Installation
+
+You can also install `watchdog` with Cargo by using
+
+```console
+$ cargo install --git https://github.com/matthew-e-brown/watchdog
+```
