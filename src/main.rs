@@ -18,31 +18,36 @@ fn main() -> BoxResult<()> {
 
     } else if let ("update", Some(sub_matches)) = subcommand {
 
-        let gist_id = get_gist_id(sub_matches)?;
         let new_ip = fetch::get_new_ip()?;
 
-        // We want to update if:
-        // - the '-f' flag is set,
-        // - the new IP is different from the old IP, or
-        // - we failed to get the old IP (likely due to the gist being fresh)
+        // Don't need to do the rest if this is a dry-run
+        if sub_matches.is_present("dry-run") {
 
-        let force = sub_matches.is_present("force");
-        let dry_run = sub_matches.is_present("dry-run");
-        let is_new = match fetch::get_current_ip(&gist_id) {
-            Ok(old_ip) => new_ip != old_ip,
-            Err(_) => true,
-        };
-
-        if !dry_run && (force || is_new) {
-            let use_ssh = sub_matches.is_present("use-ssh");
-            let use_utc = sub_matches.is_present("use-utc");
-            update::clone_and_push(&gist_id, &new_ip, use_ssh, use_utc)?;
-        }
-
-        if dry_run || sub_matches.is_present("print") {
             println!("{}", new_ip);
-        }
 
+        } else {
+
+            let gist_id = get_gist_id(sub_matches)?;
+
+            // We want to update if:
+            // - the '-f' flag is set,
+            // - the new IP is different from the old IP, or
+            // - we failed to get the old IP (likely due to the gist being fresh)
+            let update = sub_matches.is_present("force") || match fetch::get_current_ip(&gist_id) {
+                Ok(old_ip) => new_ip != old_ip,
+                Err(_) => true,
+            };
+
+            if update {
+                let use_ssh = sub_matches.is_present("use-ssh");
+                let use_utc = sub_matches.is_present("use-utc");
+                update::clone_and_push(&gist_id, &new_ip, use_ssh, use_utc)?;
+            }
+
+            if sub_matches.is_present("print") {
+                println!("{}", new_ip);
+            }
+        }
     } else {
         // Clap setting 'SubcommandRequiredElseHelp' means at least one of the above subcommands will always be run
         unreachable!();
@@ -57,7 +62,7 @@ fn clap() -> App<'static, 'static> {
 
     let common_args = vec![
         Arg::with_name("gist")
-            .required_unless("env-var")
+            .required_unless_one(&["env-var", "dry-run"])
             .conflicts_with("env-var")
             .value_name("gist id")
             .help("The ID of the Gist to use"),
