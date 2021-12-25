@@ -86,7 +86,7 @@ pub fn push(repo_path: &Path) -> StaticResult<()> {
         .or(Err("Could not run `git`."))?;
 
     if !status.success() {
-        return Err("Could not push to repository.");
+        return Err("Could not push to gist repository.");
     }
 
     Ok(())

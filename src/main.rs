@@ -1,5 +1,5 @@
 use std::env;
-use clap::{App, AppSettings, SubCommand, Arg, ArgMatches};
+use clap::{App, AppSettings, SubCommand, Arg, ArgMatches, crate_version};
 
 use watchdog::{fetch, update, BoxResult};
 
@@ -34,10 +34,10 @@ fn main() -> BoxResult<()> {
             let use_ssh = sub_matches.is_present("use-ssh");
             let use_utc = sub_matches.is_present("use-utc");
             update::clone_and_push(&gist_id, &new_ip, use_ssh, use_utc)?;
-        }
 
-        if sub_matches.is_present("print") {
-            println!("{}", new_ip);
+            if sub_matches.is_present("print") {
+                println!("{}", new_ip);
+            }
         }
 
     } else {
@@ -54,19 +54,21 @@ fn clap() -> App<'static, 'static> {
 
     let common_args = vec![
         Arg::with_name("gist")
-            .required_unless("use-env")
-            .conflicts_with("use-env")
+            .required_unless("env-var")
+            .conflicts_with("env-var")
             .value_name("gist id")
             .help("The ID of the Gist to use"),
-        Arg::with_name("use-env")
+        Arg::with_name("env-var")
             .short("v")
             .long("var")
             .value_name("environment variable")
-            .help("Pull the Gist ID from an environment variable instead"),
+            .number_of_values(1)
+            .help("Pull the Gist ID from an environment variable instead of from a parameter"),
     ];
 
     App::new("Watchdog")
         .author("Matthew Brown <matthew.e.brown.17@gmail.com>")
+        .version(crate_version!())
         .subcommands(vec![
             SubCommand::with_name("fetch")
                 .about("Fetch the most up to date IP address from the gist")
@@ -74,34 +76,36 @@ fn clap() -> App<'static, 'static> {
             SubCommand::with_name("update")
                 .about("Fetch the current public IP address and push it to the gist")
                 .args(&common_args)
-                .arg(Arg::with_name("force")
+                .args(&vec![
+                    Arg::with_name("force")
                         .long("force")
                         .short("f")
-                        .help("Update the gist even if the current IP matches the new IP"))
-                .arg(Arg::with_name("print")
+                        .help("Update the gist even if the current IP matches the new IP"),
+                    Arg::with_name("print")
                         .long("print")
                         .short("p")
-                        .help("Print the new IP address after updating the gist"))
-                .arg(Arg::with_name("use-ssh")
+                        .help("Print the new IP address after updating the gist"),
+                    Arg::with_name("use-ssh")
                         .short("s")
                         .long("use-ssh")
-                        .help("Use an SSH key instead of HTTPS to authenticate with gist.github.com"))
-                .arg(Arg::with_name("use-utc")
+                        .help("Use an SSH key instead of HTTPS to authenticate with gist.github.com"),
+                    Arg::with_name("use-utc")
                         .short("z")
                         .long("use-utc")
-                        .help("Use UTC times instead of local time in Markdown file"))
+                        .help("Use UTC times instead of local time in Markdown file"),
+                ])
         ])
         .setting(AppSettings::SubcommandRequiredElseHelp)
 
 }
 
 
-fn get_gist_id<'a>(args: &'a ArgMatches) -> Result<String, &'static str> {
+fn get_gist_id<'a>(args: &'a ArgMatches) -> BoxResult<String> {
 
     if args.is_present("env-var") {
 
         let key = args.value_of("env-var").unwrap();
-        env::var(key).or(Err("That environment variable does not have a value"))
+        env::var(key).or(Err(format!("Environment variable '{}' is empty", key).into()))
 
     } else {
 

@@ -20,22 +20,23 @@ fn curl_to_string(url: &str) -> BoxResult<String> {
             Ok(data.len())
         }).unwrap();
 
-        transfer.perform().or(Err("Could not perform network request"))?;
+        transfer.perform().or(Err(format!("`{}`: could not perform network request", url)))?;
     }
 
     let code = curl.response_code().unwrap();
     if code == 404 {
-        return Err(format!("Error 404: {}", url).into());
+        return Err(format!("Have you run 'update' yet? 404 at {}", url).into());
     }
 
-    String::from_utf8(buffer).or(Err("Could not convert network response to String".into()))
+    String::from_utf8(buffer)
+        .or(Err(format!("`{}`: could not convert response to String", url).into()))
 }
 
 
 pub fn get_new_ip() -> BoxResult<String> {
 
     let json = curl_to_string("https://ipinfo.io")?;
-    let json: Value = from_str(&json).or(Err("Did not receive valid JSON from server"))?;
+    let json: Value = from_str(&json).or(Err("Did not receive valid JSON from ipinfo.io's API"))?;
 
     if let Some(value) = json.get("ip") {
         if let Value::String(addr) = value {
@@ -43,7 +44,7 @@ pub fn get_new_ip() -> BoxResult<String> {
         }
     }
 
-    Err("No 'ip' key in JSON response".into())
+    Err("Received unexpected response from ipinfo.io's API".into())
 }
 
 
@@ -53,7 +54,7 @@ pub fn get_current_ip(gist_id: &str) -> BoxResult<String> {
     let url = format!("{}/raw/{}", url, DATA_FILENAME);
 
     let json = curl_to_string(&url)?;
-    let json: Value = from_str(&json).or(Err("Did not receive valid JSON from server"))?;
+    let json: Value = from_str(&json).or(Err(format!("'{}' did not respond with JSON", url)))?;
 
     let value = json.get("current")
         .and_then(|val| val.get("address"));
@@ -64,5 +65,5 @@ pub fn get_current_ip(gist_id: &str) -> BoxResult<String> {
         }
     }
 
-    Err("No 'current.address' key in JSON response".into())
+    Err(format!("'{}' does not contain a '.current.address' field", url).into())
 }
