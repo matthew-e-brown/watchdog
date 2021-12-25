@@ -25,19 +25,22 @@ fn main() -> BoxResult<()> {
         // - the '-f' flag is set,
         // - the new IP is different from the old IP, or
         // - we failed to get the old IP (likely due to the gist being fresh)
-        let update = sub_matches.is_present("force") || match fetch::get_current_ip(&gist_id) {
+
+        let force = sub_matches.is_present("force");
+        let dry_run = sub_matches.is_present("dry-run");
+        let is_new = match fetch::get_current_ip(&gist_id) {
             Ok(old_ip) => new_ip != old_ip,
             Err(_) => true,
         };
 
-        if update {
+        if !dry_run && (force || is_new) {
             let use_ssh = sub_matches.is_present("use-ssh");
             let use_utc = sub_matches.is_present("use-utc");
             update::clone_and_push(&gist_id, &new_ip, use_ssh, use_utc)?;
+        }
 
-            if sub_matches.is_present("print") {
-                println!("{}", new_ip);
-            }
+        if dry_run || sub_matches.is_present("print") {
+            println!("{}", new_ip);
         }
 
     } else {
@@ -85,6 +88,10 @@ fn clap() -> App<'static, 'static> {
                         .long("print")
                         .short("p")
                         .help("Print the new IP address after updating the gist"),
+                    Arg::with_name("dry-run")
+                        .long("dry-run")
+                        .short("d")
+                        .help("Fetch a new IP (without updating it) and print it out"),
                     Arg::with_name("use-ssh")
                         .short("s")
                         .long("use-ssh")
