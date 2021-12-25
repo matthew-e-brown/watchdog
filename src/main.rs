@@ -96,7 +96,7 @@ fn clap() -> App<'static, 'static> {
                     Arg::with_name("dry-run")
                         .long("dry-run")
                         .short("d")
-                        .help("Fetch a new IP (without updating it) and print it out"),
+                        .help("Fetch a new IP (without updating the gist) and print it out"),
                     Arg::with_name("use-ssh")
                         .short("s")
                         .long("use-ssh")

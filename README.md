@@ -1,11 +1,13 @@
 # Watchdog
 
 *Watchdog* is a tool to allow you to keep track of your public IP address by
-keeping the most up-to-date IP in a GitHub Gist. I built this program for myself
-as an upgrade to a dinky Python script I was using.
+keeping the most up-to-date IP in a GitHub Gist. Knowing the public IP address
+of one of your machines can be very helpful while you're on the road on another
+machine. Watchdog lets you do that easily.
 
 My ISP charges extra for static IPs, but I have found keeping the public address
-accessible online to be a satisfactory alternative.
+accessible online to be a satisfactory alternative. I built this program for
+myself as an upgrade to a dinky Python script I was using.
 
 ## Usage
 
@@ -16,6 +18,9 @@ passed as a positional argument. That may look something like:
 $ watchdog fetch 2be930b9e8f00d34619f748efb54def3
 ```
 
+You should **create your own gist first**&mdash;simply use a blank or dummy file
+to start out.
+
 If you would prefer, you can use an environment variable instead:
 
 ```console
@@ -24,8 +29,8 @@ $ watchdog fetch -v IP_GIST_ID
 ```
 
 This allows you to keep your Gist's ID private should you wish to put a call to
-`watchdog` in your `.bashrc` or `.ssh/config` files (as I intend to do), which
-may be committed to a dot-files repo.
+`watchdog` in a file that may be committed somewhere, such as `.bashrc` or
+`.ssh/config` (as I intend to do) in a dot-files repo.
 
 See `watchdog --help`, `watchdog update --help`, and `watchdog fetch --help` for
 a complete set of options.
@@ -34,8 +39,9 @@ a complete set of options.
 ### Update
 
 Queries https://ipinfo.io for the device's current public IP address and update
-the given gist with it. This command is the one you would run on a schedule,
-using something like a `cron` job or the Windows Task Scheduler.
+the given gist with it. This command should be run on a schedule using something
+like `cron` or the Windows Task Scheduler.
+
 
 #### Extra options
 
